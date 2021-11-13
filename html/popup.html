@@ -1,0 +1,149 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="css/bootstrap.min.css">
+        <link rel="stylesheet" href="css/style.css">
+        <link href="css/fontAwesome/css/all.css" rel="stylesheet">
+    </head>
+    <body>
+        <div>
+            <div id="header">
+                <div id="headerStatus" class="connected col-4">
+                    <div id="headerStatusLight"></div>
+                    <span id="headerStatusText">Connected</span>
+                </div>
+                <div id="appLogo" class="col-4">
+                    <img src="../images/logoPurple.png">
+                </div>
+                <div id="settings" class="col-4">
+                    <button id="settingsBtn">&#9776</button>
+                </div>
+            </div>
+            <div id="walletResume">
+                <span>BALANCE</span>
+                <p>
+                    <span id="walletBalance">x</span><span class="ticker"> VGO</span>
+                </p>
+                <p style="font-size: 1em; margin-top: -20px; display: none" id="walletPendingText">
+                    Pending: <span id="walletPendingBalance">0</span><span class="ticker"> VGO</span>
+                </p>
+                <div id="resumeActions">
+                    <div class="col-3" id="sendPopupToggle">
+                        <button><i class="fas fa-arrow-up"></i></button>
+                        <br>
+                        <span>Send</span>
+                    </div>
+                    <div class="col-3" id="receivePopupToggle">
+                        <button><i class="fas fa-arrow-down"></i></button>
+                        <br>
+                        <span>Receive</span>
+                    </div>
+                </div>
+            </div>
+            <div id="tabsBtns">
+                    <button id="resumeBtn" class="col-6 active" style="margin-right: -4.5px">Resume</button>
+                    <button id="appsBtn" class="col-6">Apps</button>
+            </div>
+            <div id="tabs">
+                <div id="resumeTab" class="active">
+                    <div class="activity" style="display: none" id="baseActivity">
+                        <div class="col-2 activityIndicator">
+                            <span data-symbol=""><i class="fas fa-arrow-up"></i></span>
+                            <progress-ring style="display: none" stroke="4" radius="20" progress="0" data-progress=""></progress-ring>
+                            <span data-refused="" style="display: none">X</span>
+                        </div>
+                        <div class="activityDetails col-6">
+                            <span data-type="">Sent</span>
+                            <p>
+                                <span data-date="">Mon dd</span> &#183 <span data-action="">From</span> <span class="activityAddress" data-addr=""></span>
+                            </p>
+                        </div>
+                        <div class="activityAmount col-4">
+                            <p>
+                                <span data-amount="">0</span><span class="ticker"> VGO</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div id="appsTab">
+                    
+                </div>
+            </div>
+            <div class="popup" id="receivePopup">
+                <div id="receivePopupBox">
+                    <div class="popupHeader">
+                        <button class="popupClose" id="receivePopupClose"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="popupBody">
+                        <h1>Your address</h1>
+                        <p style="color: var(--mainColor)">Use it to receive funds</p>
+                        <div class="input-group">
+                            <input type="text" id="walletAddress" readonly="" class="form-control" aria-describedby="walletAddressCopy">
+                            <button id="walletAddressCopy" class="btn btn-outline-secondary"><i class="far fa-copy"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="popup" id="sendPopup">
+                <div id="sendPopupBox">
+                    <div class="popupHeader">
+                        <button class="popupClose" id="sendPopupClose"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="popupBody">
+                        <h1 style="margin-bottom: 1em;">Send VGOs</h1>
+                        <div id="sendForm1">
+                            <input type="text" class="form-control" id="sendRecipient" placeholder="Enter recipient">
+                            <div id="sendInvalidRecipient" class="invalid-feedback" style="display: none; text-align: left;">
+                              Please enter a valid address.
+                            </div>
+                            <div class="input-group" style="margin-top: 1em;">
+                                <input type="number" id="sendAmount" class="form-control" aria-describedby="sendAmountMax" placeholder="Enter amount in VGOs">
+                                <button id="sendAmountMax" class="btn btn-outline-secondary">Max</button>
+                            </div>
+                            <div id="sendInvalidAmount" class="invalid-feedback" style="display: none; text-align: left;">
+                              Please enter a valid amount.
+                            </div>
+                            <br>
+                            <button class="btn btn-primary" id="sendBtn">Send</button>
+                            <i class="fas fa-spinner fa-pulse" id="sendSpinner" style="margin-left: 8px;font-size: 1.4em;vertical-align: middle;margin-right: -30.5px;"></i>
+                        </div>
+                        <div id="sendForm2" style="display: none;">
+                            <input type="password" class="form-control" id="sendRecipient" placeholder="Enter wallet password" style="margin: 1em 0;">
+                            <br>
+                            <button class="btn btn-primary">Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="setupPasswordPopup" class="row">
+                <button id="setupPasswordPopupClose"><i class="fas fa-times"></i></button>
+                <div class="col-8">
+                    <p><b>Don't loose your funds!</b>
+                    <br>Setup a password now.</p>
+                </div>
+                <div class="col-4">
+                    <button class="btn btn-primary" id="btnSetupPassword">Setup</button>
+                </div>
+            </div>
+        </div>
+        <script src="../js/jquery.min.js"></script>
+        <script src="../js/bootstrap.min.js"></script>
+        <script src="../js/tinysort.min.js"></script>
+        <script src="../js/browser-polyfill.min.js"></script>
+        <script src="../js/sjcl/sjcl.js"></script>
+        <script src="../js/sjcl/core/random.js"></script>
+        <script src="../js/sjcl/core/bn.js"></script>
+        <script src="../js/sjcl/core/aes.js"></script>
+        <script src="../js/sjcl/core/ecc.js"></script>
+        <script src="../js/sjcl/core/ripemd160.js"></script>
+        <script src="../js/sjcl/core/bitArray.js"></script>
+        <script src="../js/sjcl/core/codecBytes.js"></script>
+        <script src="../js/sjcl/core/ctr.js"></script>
+        <script src="../js/bigInteger.js"></script>
+        <script src="../js/BN.js"></script>
+        <script src="../js/secp256k1.js"></script>
+        <script src="../js/crypto.js"></script>
+        <script src="../js/virgoAPI.js"></script>
+        <script src="../js/wallet.js"></script>
+        <script src="../js/popup.js"></script>
+    </body>
+</html>

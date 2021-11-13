@@ -1,0 +1,34 @@
+{
+  "manifest_version": 2,
+  "name": "Virgo",
+  "version": "0.1",
+  "short_name": "Virgo Companion and Wallet",
+  "description": "Store your VGOs and use Apps built on Virgo",
+  "permissions": ["storage","notifications"],
+
+  "browser_action": {
+    "default_icon": "images/logoPurple.png",
+    "default_popup": "html/popup.html",
+    "default_title": "Virgo"
+  },
+  
+  "background": {
+    "scripts": [
+      "js/browser-polyfill.min.js",
+      "js/sjcl/sjcl.js",
+      "js/sjcl/core/random.js",
+      "js/sjcl/core/bn.js",
+      "js/sjcl/core/aes.js",
+      "js/sjcl/core/ecc.js",
+      "js/sjcl/core/ripemd160.js",
+      "js/sjcl/core/bitArray.js",
+      "js/sjcl/core/codecBytes.js",
+      "js/sjcl/core/ctr.js",
+      "js/bigInteger.js",
+      "js/virgoAPI.js",
+      "js/wallet.js",
+      "js/crypto.js",
+      "js/background.js"
+      ]
+  }
+}
