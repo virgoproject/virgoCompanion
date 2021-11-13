@@ -141,6 +141,10 @@ class Wallet {
         
     }
     
+    isEncrypted(){
+        return this.encryptedDataKey !== undefined;
+    }
+    
     getAddress(){
         return this.addresses[0];
     }

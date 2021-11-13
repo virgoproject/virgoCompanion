@@ -181,6 +181,7 @@
     padding: 6px 1em;
     right: 0;
     left: 0;
+    display: none;
 } #setupPasswordPopupClose {
     background: none;
     width: fit-content;

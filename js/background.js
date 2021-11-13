@@ -35,8 +35,8 @@ browser.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         case "isConnected":
             sendResponse(virgoAPI.providersCount() > 0);
             break;
-        case "getAddress":
-            sendResponse(wallet.getAddress());
+        case "getBaseInfos":
+            sendResponse({"address": wallet.getAddress(), "isEncrypted": wallet.isEncrypted()});
             break;
         
         case "getBalance":

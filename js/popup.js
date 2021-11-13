@@ -132,9 +132,11 @@ function resetSendErrors() {
 /**
  * Display base informations on popup
  */
-browser.runtime.sendMessage({command: 'getAddress'})
+browser.runtime.sendMessage({command: 'getBaseInfos'})
 .then(function (response) {
-    $("#walletAddress").val(response.address);
+    $("#walletAddress").val(response.address.address);
+    if (!response.isEncrypted)
+      $("#setupPasswordPopup").show();
 });
 
 /**
@@ -281,6 +283,9 @@ class ProgressRing extends HTMLElement {
 
 window.customElements.define('progress-ring', ProgressRing);
 
+$("#setupPasswordPopupClose").click(function(){
+  $("#setupPasswordPopup").hide();
+});
 
    /* pair = sjcl.ecc.ecdsa.generateKeys(sjcl.ecc.curves.k256);
     privhex = sjcl.codec.hex.fromBits(pair.sec.get());
