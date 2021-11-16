@@ -136,7 +136,7 @@ browser.runtime.sendMessage({command: 'getBaseInfos'})
 .then(function (response) {
     $("#walletAddress").val(response.address.address);
     if (!response.isEncrypted)
-      $("#setupPasswordPopup").show();
+      $("#setupPasswordPopup").css("display", "flex");
 });
 
 /**
@@ -285,6 +285,55 @@ window.customElements.define('progress-ring', ProgressRing);
 
 $("#setupPasswordPopupClose").click(function(){
   $("#setupPasswordPopup").hide();
+});
+
+
+/**
+ * Settings tab
+ */
+$("#settingsBtn").click(function(){
+  
+  if ($("#settingsPane").is(":hidden")){
+    $("#settingsPane").show();
+    $("#mainPane").hide();
+  } else {
+    $("#settingsPane").hide();
+    $("#mainPane").show();
+  }
+  
+});
+
+var currentSettingsPage = 0;
+
+$("#settingsReturnBtn").click(function() {
+  
+  if (currentSettingsPage == 0) {
+    $("#settingsPane").hide();
+    $("#mainPane").show();
+    return;
+  }
+  
+  if (currentSettingsPage == 1)
+    $("#settingsTitle").html("Settings");
+  
+  $(".settings"+currentSettingsPage).hide();
+  currentSettingsPage--;
+  
+});
+
+$("#securitySettingsTab").click(function() {
+  
+  $("#securitySettings").show();
+  $("#settingsTitle").html("Security");
+  currentSettingsPage = 1;
+  
+});
+
+$("#setPasswordTab").click(function() {
+  
+  $("#setPasswordSettings").show();
+  currentSettingsPage = 2;
+  
 });
 
    /* pair = sjcl.ecc.ecdsa.generateKeys(sjcl.ecc.curves.k256);
