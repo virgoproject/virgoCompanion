@@ -336,6 +336,22 @@ $("#setPasswordTab").click(function() {
   
 });
 
+$("#newPassword").on('input', function(){
+  validateNewPasswordEntry();
+});
+$("#newPasswordRepeat").on('input', function(){
+  validateNewPasswordEntry();
+});
+
+function validateNewPasswordEntry() {
+
+    if ($("#newPassword").val().length < 8 || $("#newPasswordRepeat").val().length < 8)
+      $("#newPasswordConfBtn").prop("disabled", true);
+    else
+      $("#newPasswordConfBtn").prop("disabled", false);
+    
+}
+
    /* pair = sjcl.ecc.ecdsa.generateKeys(sjcl.ecc.curves.k256);
     privhex = sjcl.codec.hex.fromBits(pair.sec.get());
     

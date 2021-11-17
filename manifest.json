@@ -7,7 +7,7 @@
   "permissions": ["storage","notifications"],
 
   "browser_action": {
-    "default_icon": "images/logoPurple.png",
+    "default_icon": "images/vgoLogoApp.png",
     "default_popup": "html/popup.html",
     "default_title": "Virgo"
   },
