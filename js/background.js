@@ -3,15 +3,12 @@ wallet = null;
 
 browser.storage.local.get("wallet").then(
     function(res){//on success
-        if (res.wallet === undefined){
+        if (res.wallet === undefined)
             generateWallet();
-        }
         else {
             var foundWallet = Wallet.fromJSON(res.wallet);
             if (foundWallet !== false) {
                 wallet = foundWallet;
-            }else{
-                generateWallet();
             }
         }
     },
@@ -36,6 +33,10 @@ browser.runtime.onMessage.addListener(function(request, sender, sendResponse) {
             sendResponse(virgoAPI.providersCount() > 0);
             break;
         case "getBaseInfos":
+            if (wallet == null) {
+                sendResponse({"locked": true});
+                return;
+            }
             sendResponse({"address": wallet.getAddress(), "isEncrypted": wallet.isEncrypted()});
             break;
         
@@ -65,8 +66,16 @@ browser.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 sendResponse({"hash": tx.hash, "impact": tx.impact, "date": tx.date, "status": status, "confirmations": confirmations, "address": tx.address});
             }
             break;
-        case "sendTransaction":
-            (new TransactionBuilder()).address(wallet.getAddress()).output(request.recipient, request.amount).send();
+        case "sendTransaction":            
+            (new TransactionBuilder()).address(wallet.getAddress()).output(request.recipient, request.amount).callback(function(result){
+                sendResponse(result);
+            }).send(request.password);
+            break;
+        case "newPassword":
+            wallet.encrypt(request.password);
+            console.log("new wallet: ");
+            console.log(wallet.toJSON());
+            browser.storage.local.set({wallet: wallet.toJSON()});
             break;
     }
     //use return true for async response

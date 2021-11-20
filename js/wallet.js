@@ -106,7 +106,6 @@ class Wallet {
     
     static fromJSON(json, password){
         try {
-            
             var data, encryptedDataKey, encryptedDataKeyIV, dataKey, passwordSalt;
             
             if (json.encryptedEncryptedDataKey === undefined) {
@@ -117,7 +116,6 @@ class Wallet {
                 var encryptedData = sjcl.codec.bytes.toBits(Converter.hexToBytes(json.encryptedData));
                 var encryptedDataIV = sjcl.codec.bytes.toBits(Converter.hexToBytes(json.encryptedDataIV));
                 passwordSalt = sjcl.codec.bytes.toBits(Converter.hexToBytes(json.passwordSalt));
-                
                 var passwordHash = sjcl.misc.pbkdf2(password, passwordSalt, 10000, 256);
                 var cipher = new sjcl.cipher.aes(passwordHash);
                 dataKey = sjcl.mode.ctr.decrypt(cipher, encryptedDataKey, encryptedDataKeyIV);
@@ -136,9 +134,24 @@ class Wallet {
             return new Wallet(json.version, addresses, new Map(), dataKey, encryptedDataKey, encryptedDataKeyIV, passwordSalt);
             
         } catch(e) {
+            console.log(e);
             return false;
         }
         
+    }
+    
+    encrypt(password){
+        for (var address of this.addresses) {
+            address.encrypt(password);
+        }
+        
+        this.version = 1;
+        this.passwordSalt = sjcl.random.randomWords(32);
+        var passwordHash = sjcl.misc.pbkdf2(password, this.passwordSalt, 10000, 256);
+        this.dataKey = sjcl.random.randomWords(8); 
+        this.encryptedDataKeyIV = sjcl.random.randomWords(4);
+        var cipher = new sjcl.cipher.aes(passwordHash);
+        this.encryptedDataKey = sjcl.mode.ctr.encrypt(cipher, this.dataKey, this.encryptedDataKeyIV);
     }
     
     isEncrypted(){
@@ -246,12 +259,13 @@ class Wallet {
         for (const address of this.addresses)
             addressesJSON.push(address.toJSON());
         
+        /**
         var transactionsJSON = [];
         for (const transaction of this.transactions)
             transactionsJSON.push(transaction.toJSON());
-            
+            **/
         data.addresses = addressesJSON;
-        data.transactions = transactionsJSON;
+        //data.transactions = transactionsJSON;
         
         if (this.dataKey === undefined)
             json.encryptedData = data;

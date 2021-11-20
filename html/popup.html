@@ -5,7 +5,7 @@
         <link href="css/fontAwesome/css/all.css" rel="stylesheet">
     </head>
     <body>
-        <div>
+        <div id="mainBlock">
             <div id="header">
                 <div id="headerStatus" class="connected col-4">
                     <div id="headerStatusLight"></div>
@@ -108,9 +108,14 @@
                                 <i class="fas fa-spinner fa-pulse" id="sendSpinner" style="margin-left: 8px;font-size: 1.4em;vertical-align: middle;margin-right: -30.5px;"></i>
                             </div>
                             <div id="sendForm2" style="display: none;">
-                                <input type="password" class="form-control" id="sendRecipient" placeholder="Enter wallet password" style="margin: 1em 0;">
+                                <p class="grayLink" id="sendConfirmBack"><i class="fas fa-chevron-left"></i> Edit</p>
+                                <input type="password" class="form-control" id="sendPassword" placeholder="Enter wallet password" style="margin: 0.5em 0;">
+                                <div id="sendInvalidPassword" class="invalid-feedback" style="display: none; text-align: left;">
+                                  Incorrect password.
+                                </div>
                                 <br>
-                                <button class="btn btn-primary">Send</button>
+                                <button class="btn btn-primary" id="sendConfBtn">Send</button>
+                                <i class="fas fa-spinner fa-pulse" id="sendConfSpinner" style="margin-left: 8px;font-size: 1.4em;vertical-align: middle;margin-right: -30.5px;display: none;"></i>
                             </div>
                         </div>
                     </div>
@@ -194,6 +199,14 @@
                     
                 </div>
             </div>
+        </div>
+        <div id="unlockWalletBlock" style="display: none;">
+            <img src="/images/logoPurpleBig.png" style="width: 125px;">
+            <h1 style="color: #644696">Welcome back!</h1>
+            <p style="font-size: 1.1em;color: #999;font-style: italic;">Funds are SAFU.</p>
+            <br>
+            <input type="password" class="form-control" id="unlockPassword" placeholder="Enter your password"><br>
+            <button class="btn btn-primary" disabled id="unlockWallet">Unlock wallet</button>
         </div>
         <script src="../js/jquery.min.js"></script>
         <script src="../js/bootstrap.min.js"></script>

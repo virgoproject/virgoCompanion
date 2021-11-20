@@ -685,6 +685,16 @@ class Address {
         return json;
     }
     
+    encrypt(newPassword){
+        this.salt = sjcl.random.randomWords(32);
+        this.iv = sjcl.random.randomWords(4);
+        
+        var hashedPassword = sjcl.misc.pbkdf2(newPassword, this.salt, 10000, 256);
+        var cipher = new sjcl.cipher.aes(hashedPassword);
+        
+        this.privateKey = sjcl.mode.ctr.encrypt(cipher, this.privateKey.get(), this.iv);
+    }
+    
     isEncrypted(){
         return this.iv !== undefined;
     }

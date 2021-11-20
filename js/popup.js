@@ -1,3 +1,4 @@
+var isWalletEncrypted = true;
 /**
  * Tabs toggle buttons
  */
@@ -104,6 +105,12 @@ $("#sendBtn").click(function(){
     
     if (errors) return;
     
+    if (isWalletEncrypted) {
+        $("#sendForm1").hide();
+        $("#sendForm2").show();
+        return;
+    }
+    
     $("#sendBtn").prop('disabled', true);
     $("#sendSpinner").show();
     browser.runtime.sendMessage({command: 'sendTransaction', recipient: $("#sendRecipient").val(), amount: VirgoAPI.amountToAtomic($("#sendAmount").val())})
@@ -128,15 +135,35 @@ function resetSendErrors() {
     $("#sendInvalidAmount").hide();
 }
 
+$("#sendConfirmBack").click(function(){
+  $("#sendForm2").hide();
+  $("#sendForm1").show();
+});
+
+$("#sendConfBtn").click(function(){
+    $("#sendConfBtn").prop('disabled', true);
+    $("#sendConfSpinner").show();
+    browser.runtime.sendMessage({command: 'sendTransaction', recipient: $("#sendRecipient").val(), amount: VirgoAPI.amountToAtomic($("#sendAmount").val()), password: $("#sendPassword").val()})
+    .then(function (response) {
+        console.log("resp: " + response);
+    });
+});
 
 /**
  * Display base informations on popup
  */
 browser.runtime.sendMessage({command: 'getBaseInfos'})
 .then(function (response) {
-    $("#walletAddress").val(response.address.address);
-    if (!response.isEncrypted)
-      $("#setupPasswordPopup").css("display", "flex");
+  if (response.locked === true) {
+    $("#unlockWalletBlock").show();
+    $("#mainBlock").hide();
+    return;
+  }
+  $("#walletAddress").val(response.address.address);
+  if (!response.isEncrypted){
+    $("#setupPasswordPopup").css("display", "flex");
+    isWalletEncrypted = false;
+  }
 });
 
 /**
@@ -351,6 +378,33 @@ function validateNewPasswordEntry() {
       $("#newPasswordConfBtn").prop("disabled", false);
     
 }
+
+$("#newPassword").click(function(){
+  resetNewPasswordErrors();
+});
+$("#newPasswordRepeat").click(function(){
+  resetNewPasswordErrors();
+});
+
+function resetNewPasswordErrors() {
+    $("#newPassword").removeClass("is-invalid");
+    $("#newPasswordRepeat").removeClass("is-invalid");
+    $("#newPasswordNoMatch").hide();
+}
+
+$("#newPasswordConfBtn").click(function(){
+  if ($("#newPassword").val() != $("#newPasswordRepeat").val()) {
+    $("#newPassword").addClass("is-invalid");
+    $("#newPasswordRepeat").addClass("is-invalid");
+    $("#newPasswordNoMatch").show();
+    return;
+  }
+  
+  browser.runtime.sendMessage({command: 'newPassword', password: $("#newPassword").val()})
+  .then(function () {
+      console.log("password changed!");
+  });
+});
 
    /* pair = sjcl.ecc.ecdsa.generateKeys(sjcl.ecc.curves.k256);
     privhex = sjcl.codec.hex.fromBits(pair.sec.get());
