@@ -111,10 +111,10 @@ $("#sendBtn").click(function(){
         return;
     }
     
-    $("#sendBtn").prop('disabled', true);
-    $("#sendSpinner").show();
+    disableLoadBtn($("#sendBtn"));
     browser.runtime.sendMessage({command: 'sendTransaction', recipient: $("#sendRecipient").val(), amount: VirgoAPI.amountToAtomic($("#sendAmount").val())})
     .then(function () {
+        enableLoadBtn($("#sendBtn"));
         $("#sendPopup").hide();
     });
 });
@@ -127,12 +127,19 @@ $("#sendAmount").click(function(){
     resetSendErrors();
 });
 
+$("#sendPassword").click(function(){
+    resetSendErrors();
+});
+
 function resetSendErrors() {
     $("#sendRecipient").removeClass("is-invalid");
     $("#sendInvalidRecipient").hide();
     
     $("#sendAmount").removeClass("is-invalid");
     $("#sendInvalidAmount").hide();
+    
+    $("#sendPassword").removeClass("is-invalid");
+    $("#sendInvalidPassword").hide();
 }
 
 $("#sendConfirmBack").click(function(){
@@ -140,14 +147,29 @@ $("#sendConfirmBack").click(function(){
   $("#sendForm1").show();
 });
 
+$("#sendPassword").on("input", function(){
+  if ($("#sendPassword").val().length < 8) {
+    $("#sendConfBtn").prop("disabled", true);
+  }else{
+    $("#sendConfBtn").prop("disabled", false);
+  }
+});
+
 $("#sendConfBtn").click(function(){
-    $("#sendConfBtn").prop('disabled', true);
-    $("#sendConfSpinner").show();
+    disableLoadBtn($("#sendConfBtn"));
     browser.runtime.sendMessage({command: 'sendTransaction', recipient: $("#sendRecipient").val(), amount: VirgoAPI.amountToAtomic($("#sendAmount").val()), password: $("#sendPassword").val()})
     .then(function (response) {
-        console.log("resp: " + response);
+        enableLoadBtn($("#sendConfBtn"));
+        if (response === false) {
+            $("#sendInvalidPassword").show();
+            $("#sendPassword").addClass("is-invalid");
+            return;
+        }
+        $("#sendPopup").hide();
     });
 });
+
+
 
 /**
  * Display base informations on popup
@@ -159,12 +181,16 @@ browser.runtime.sendMessage({command: 'getBaseInfos'})
     $("#mainBlock").hide();
     return;
   }
+  loadBaseInfos(response);
+});
+
+function loadBaseInfos(response){
   $("#walletAddress").val(response.address.address);
   if (!response.isEncrypted){
     $("#setupPasswordPopup").css("display", "flex");
     isWalletEncrypted = false;
   }
-});
+}
 
 /**
  * Update informations
@@ -392,6 +418,11 @@ function resetNewPasswordErrors() {
     $("#newPasswordNoMatch").hide();
 }
 
+$("#setPasswordPassBack").click(function(){
+    $("#setPasswordPassForm").hide();
+    $("#setPasswordMainForm").show();
+});
+
 $("#newPasswordConfBtn").click(function(){
   if ($("#newPassword").val() != $("#newPasswordRepeat").val()) {
     $("#newPassword").addClass("is-invalid");
@@ -400,11 +431,85 @@ $("#newPasswordConfBtn").click(function(){
     return;
   }
   
+  if (isWalletEncrypted) {
+    $("#setPasswordPassForm").show();
+    $("#setPasswordMainForm").hide();
+    return;
+  }
+  
   browser.runtime.sendMessage({command: 'newPassword', password: $("#newPassword").val()})
   .then(function () {
-      console.log("password changed!");
+      $("#setPasswordMainForm").hide();
+      $("#setPasswordDone").show();
+      
+      setTimeout(function(){
+        $("#setPasswordMainForm").show();
+        $("#setPasswordDone").hide();
+      }, 3000);
+      
   });
 });
+
+$("#newPasswordCurrent").on("input", function(){
+  if ($("#newPasswordCurrent").val().length < 8)
+    $("#newPasswordConfPwBtn").prop("disabled", true);
+  else
+    $("#newPasswordConfPwBtn").prop("disabled", false);
+});
+
+$("#newPasswordConfPwBtn").click(function(){
+  browser.runtime.sendMessage({command: 'newPassword', password: $("#newPassword").val()})
+  .then(function () {
+      $("#setPasswordMainForm").hide();
+      $("#setPasswordDone").show();
+      
+      setTimeout(function(){
+        $("#setPasswordMainForm").show();
+        $("#setPasswordDone").hide();
+      }, 3000);
+      
+  });
+});
+
+$("#unlockPassword").on("input", function(){
+  if ($("#unlockPassword").val().length >= 8)
+    $("#unlockWalletBtn").prop("disabled", false);
+  else
+    $("#unlockWalletBtn").prop("disabled", true);
+});
+
+$("#unlockPassword").click(function(){
+  $("#unlockPassword").removeClass("is-invalid");
+  $("#unlockPasswordWrong").hide();
+});
+
+$("#unlockWalletBtn").click(function(){
+  disableLoadBtn($("#unlockWalletBtn"));
+  browser.runtime.sendMessage({command: 'unlock', password: $("#unlockPassword").val()})
+  .then(function (resp) {
+      enableLoadBtn($("#unlockWalletBtn"));
+      if (!resp.locked) {
+        loadBaseInfos(resp);
+        $("#unlockWalletBlock").hide();
+        $("#mainBlock").show();
+        return;
+      }
+      $("#unlockPassword").addClass("is-invalid");
+      $("#unlockPasswordWrong").show();
+  });
+});
+
+function disableLoadBtn(elem) {
+    elem.find("val").hide();
+    elem.find("i").show();
+    elem.attr("disabled", true);
+}
+
+function enableLoadBtn(elem) {
+    elem.find("val").show();
+    elem.find("i").hide();
+    elem.attr("disabled", false);
+}
 
    /* pair = sjcl.ecc.ecdsa.generateKeys(sjcl.ecc.curves.k256);
     privhex = sjcl.codec.hex.fromBits(pair.sec.get());

@@ -325,7 +325,7 @@ class TransactionBuilder {
         this.inputs = [];
         this.outputs = [];
         this.validateAmounts = true;
-        this.callback = function(){};
+        this.theCallback = function(){};
     }
     
     address(address){
@@ -353,24 +353,27 @@ class TransactionBuilder {
         return this;
     }
     
-    callback(callback){
-        this.callback = callback;
+    callback(theCallback){
+        this.theCallback = theCallback;
         return this;
     }
     
     send(password){
+        console.log("sending transaction");
         if (this.address === undefined)
             throw "No address defined";
-        
+        console.log("st1");
         if (this.outputs.length === 0)
             throw "No output defined";
-        
+        console.log("st2");
+
         this.privateKey = this.address.getPrivateKey(password);
         if (!this.privateKey){
-            this.callback(false);
+            this.theCallback(false);
             return;
         }
-        
+        console.log("st3");
+
         this.outputsValue = 0;
         for (var output of this.outputs)
             this.outputsValue += output.value;
@@ -380,7 +383,8 @@ class TransactionBuilder {
             this._retrieveInputs(1);
             return;
         }
-        
+                console.log("st4");
+
         this._validateAmounts();
     }
     
@@ -390,13 +394,13 @@ class TransactionBuilder {
         virgoAPI.getAddressTransactions(this.address.address, function(resp){
             
             if (resp.responseCode !== 200){
-                txBuilder.callback(false);
+                txBuilder.theCallback(false);
                 return;
             }
             
             virgoAPI.getTransactionsStates(resp.txs, function(resp2){
                 if (resp2.responseCode !== 200){
-                    txBuilder.callback(false);
+                    txBuilder.theCallback(false);
                     return;
                 }
 
@@ -431,7 +435,7 @@ class TransactionBuilder {
                 
                 if (resp2.states.length < 10) {
                     //not enough funds
-                    txBuilder.callback(false);
+                    txBuilder.theCallback(false);
                     return;
                 }
                 
@@ -477,11 +481,10 @@ class TransactionBuilder {
         
         var sig = ECDSA.sign(txHash, this.privateKey);
         json.sig = ECDSA.encodeSig(sjcl.codec.hex.fromBits(sig));
-        
-        console.log(JSON.stringify(json));
-        
+                
         virgoAPI.sendTransaction(JSON.stringify(json), function(resp){
-            txBuilder.callback(resp);
+            resp.transaction = json;
+            txBuilder.theCallback(resp);
         });
     }
     
@@ -490,7 +493,7 @@ class TransactionBuilder {
         
         virgoAPI.getTips(function(resp){
             if (resp.responseCode !== 200) {
-                txBuilder.callback(false);
+                txBuilder.theCallback(false);
                 return;
             }
             
@@ -701,11 +704,12 @@ class Address {
     
     checkAgainstPrivateKey(privateKey){
         var publicKey = ECDSA.getPublicKey(privateKey).get();
-        var publicKeyBytes = Array.prototype.concat(sjcl.codec.bytes.fromBits(publicKey.x), sjcl.codec.bytes.fromBits(publicKey.y));
+        var publicKeyBytes = ECDSA.ECPointCompress(sjcl.codec.bytes.fromBits(publicKey.x), sjcl.codec.bytes.fromBits(publicKey.y));
         return Converter.addressify(publicKeyBytes, addrIdentifier) == this.address;
     }
     
     getPrivateKey(password){
+        
         if (!this.isEncrypted()) return this.privateKey;
         var hashedPassword = sjcl.misc.pbkdf2(password, this.salt, 10000, 256);
 
@@ -717,7 +721,7 @@ class Address {
             sjcl.ecc.curves.k256.field.fromBits(decryptedPkeyBits));
         
         if (!this.checkAgainstPrivateKey(privateKey)) return false;
-        
+        console.log("good");
         return privateKey;
     }
     

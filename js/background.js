@@ -66,8 +66,13 @@ browser.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 sendResponse({"hash": tx.hash, "impact": tx.impact, "date": tx.date, "status": status, "confirmations": confirmations, "address": tx.address});
             }
             break;
-        case "sendTransaction":            
+        case "sendTransaction":
             (new TransactionBuilder()).address(wallet.getAddress()).output(request.recipient, request.amount).callback(function(result){
+                if (result !== false){
+                    let tx = Transaction.fromJSON(result.transaction);
+                    for (var address of wallet.addresses)
+                        address.addTx(tx, [tx]);
+                }
                 sendResponse(result);
             }).send(request.password);
             break;
@@ -77,6 +82,27 @@ browser.runtime.onMessage.addListener(function(request, sender, sendResponse) {
             console.log(wallet.toJSON());
             browser.storage.local.set({wallet: wallet.toJSON()});
             break;
+        case "unlock":
+            browser.storage.local.get("wallet").then(
+                function(res){//on success
+                    if (res.wallet === undefined){
+                        generateWallet();
+                        sendResponse({"address": wallet.getAddress(), "isEncrypted": wallet.isEncrypted()});
+                    } else {
+                        var foundWallet = Wallet.fromJSON(res.wallet, request.password);
+                        if (foundWallet !== false) {
+                            wallet = foundWallet;
+                            sendResponse({"address": wallet.getAddress(), "isEncrypted": wallet.isEncrypted()});
+                            return;
+                        }
+                        sendResponse({"locked": true});
+                    }
+                },
+                function(error){//on error
+                    console.log("error: " + error);
+                    sendResponse({"locked": true});
+                }
+            );
     }
     //use return true for async response
     return true;

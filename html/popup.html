@@ -104,8 +104,10 @@
                                   Please enter a valid amount.
                                 </div>
                                 <br>
-                                <button class="btn btn-primary" id="sendBtn">Send</button>
-                                <i class="fas fa-spinner fa-pulse" id="sendSpinner" style="margin-left: 8px;font-size: 1.4em;vertical-align: middle;margin-right: -30.5px;"></i>
+                                <button class="btn btn-primary" id="sendBtn" disabled="disabled">
+                                    <val>Send</val>
+                                    <i class="fas fa-spinner fa-pulse" style="display: none"></i>
+                                </button>
                             </div>
                             <div id="sendForm2" style="display: none;">
                                 <p class="grayLink" id="sendConfirmBack"><i class="fas fa-chevron-left"></i> Edit</p>
@@ -114,8 +116,10 @@
                                   Incorrect password.
                                 </div>
                                 <br>
-                                <button class="btn btn-primary" id="sendConfBtn">Send</button>
-                                <i class="fas fa-spinner fa-pulse" id="sendConfSpinner" style="margin-left: 8px;font-size: 1.4em;vertical-align: middle;margin-right: -30.5px;display: none;"></i>
+                                <button class="btn btn-primary" id="sendConfBtn" disabled="disabled">
+                                    <val>Send</val>
+                                    <i class="fas fa-spinner fa-pulse" style="display: none"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -186,17 +190,33 @@
                     </div>
                 </div>
                 <div id="setPasswordSettings" class="settings settings2" style="padding: 1em">
-                    <h4>Setup a new password</h4><br>
-                    <input type="password" class="form-control" id="newPassword" placeholder="Enter your new password"><br>
-                    <input type="password" class="form-control" id="newPasswordRepeat" placeholder="Repeat password">
-                    <div id="newPasswordNoMatch" class="invalid-feedback" style="display: none; text-align: left;">
-                      Passwords don't match.
+                    <div id="setPasswordMainForm">
+                        <h4>Setup a new password</h4><br>
+                        <input type="password" class="form-control" id="newPassword" placeholder="Enter your new password"><br>
+                        <input type="password" class="form-control" id="newPasswordRepeat" placeholder="Repeat password">
+                        <div id="newPasswordNoMatch" class="invalid-feedback" style="display: none; text-align: left;">
+                          Passwords don't match.
+                        </div>
+                        <br>
+                        <div style="text-align: center">
+                            <button class="btn btn-primary" disabled id="newPasswordConfBtn">Set password</button>
+                        </div>
                     </div>
-                    <br>
-                    <div style="text-align: center">
-                        <button class="btn btn-primary" disabled id="newPasswordConfBtn">Set password</button>
+                    <div id="setPasswordPassForm" style="display: none">
+                        <h4>Setup a new password</h4><br>
+                        <p class="grayLink" id="setPasswordPassBack"><i class="fas fa-chevron-left"></i> Edit</p><br>
+                        <input type="password" class="form-control" id="newPasswordCurrent" placeholder="Enter your current password">
+                        <div id="newPasswordInvalidCurrent" class="invalid-feedback" style="display: none; text-align: left;">
+                          Invalid password.
+                        </div>
+                        <br>
+                        <div style="text-align: center">
+                            <button class="btn btn-primary" disabled id="newPasswordConfPwBtn">Set password</button>
+                        </div>
                     </div>
-                    
+                    <div id="setPasswordDone" style="text-align: center; display: none">
+                        <h4>Done!</h4>
+                    </div>
                 </div>
             </div>
         </div>
@@ -205,8 +225,15 @@
             <h1 style="color: #644696">Welcome back!</h1>
             <p style="font-size: 1.1em;color: #999;font-style: italic;">Funds are SAFU.</p>
             <br>
-            <input type="password" class="form-control" id="unlockPassword" placeholder="Enter your password"><br>
-            <button class="btn btn-primary" disabled id="unlockWallet">Unlock wallet</button>
+            <input type="password" class="form-control" id="unlockPassword" placeholder="Enter your password">
+            <div id="unlockPasswordWrong" class="invalid-feedback" style="display: none; text-align: left;">
+              Incorrect password.
+            </div>
+            <br>
+            <button class="btn btn-primary" id="unlockWalletBtn" disabled="disabled">
+                <val>Unlock wallet</val>
+                <i class="fas fa-spinner fa-pulse" style="display: none"></i>
+            </button>
         </div>
         <script src="../js/jquery.min.js"></script>
         <script src="../js/bootstrap.min.js"></script>
