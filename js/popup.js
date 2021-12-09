@@ -64,8 +64,7 @@ $("#sendPopupClose").click(function(){
 $("#sendPopupToggle").click(function(){
     $("#sendRecipient").val("");
     $("#sendAmount").val("");
-    $("#sendSpinner").hide();
-    $("#sendBtn").prop('disabled', false);
+    $("#sendPassword").val("");
     
     $("#sendPopup").show();
 });
@@ -84,26 +83,11 @@ $("#sendAmountMax").click(function(){
     browser.runtime.sendMessage({command: 'getBalance'})
     .then(function (response) {
         $("#sendAmount").val(VirgoAPI.formatAmount(response));
+        $("#sendAmount").trigger("input");
     });
 });
 
 $("#sendBtn").click(function(){
-    
-    var errors = false;
-    
-    if (!Converter.validateAddress($("#sendRecipient").val(), addrIdentifier)) {
-        $("#sendInvalidRecipient").show();
-        $("#sendRecipient").addClass("is-invalid");
-        errors = true;
-    }
-    
-    if ($("#sendAmount").val() <= 0 || $("#sendAmount").val() > $("#walletBalance").html()) {
-        $("#sendAmount").addClass("is-invalid");
-        $("#sendInvalidAmount").show();
-        errors = true;
-    }
-    
-    if (errors) return;
     
     if (isWalletEncrypted) {
         $("#sendForm1").hide();
@@ -129,6 +113,56 @@ $("#sendAmount").click(function(){
 
 $("#sendPassword").click(function(){
     resetSendErrors();
+});
+
+var sendRecipientOk = false;
+var sendAmountOk = false;
+
+$("#sendAmount").on("input", function(){
+    
+    if ($("#sendAmount").val() == "") {
+      $("#sendBtn").prop("disabled", true);
+      $("#sendInvalidAmount").hide();
+      $("#sendAmount").removeClass("is-invalid");
+      sendAmountOk = false;
+      return;
+    }
+    
+    if ($("#sendAmount").val() <= 0 || $("#sendAmount").val() > Number.parseInt($("#walletBalance").html())) {
+        $("#sendBtn").prop("disabled", true);
+        $("#sendAmount").addClass("is-invalid");
+        $("#sendInvalidAmount").show();
+        errors = true;
+    }else{
+      $("#sendInvalidAmount").hide();
+      $("#sendAmount").removeClass("is-invalid");
+      sendAmountOk = true;
+      $("#sendBtn").prop("disabled", !sendRecipientOk);
+    }
+    
+});
+
+$("#sendRecipient").on("input", function(){
+    if ($("#sendRecipient").val().length < 26) {
+      $("#sendBtn").prop("disabled", true);
+      $("#sendInvalidRecipient").hide();
+      $("#sendRecipient").removeClass("is-invalid");
+      sendRecipientOk = false;
+      return;
+    }
+    
+    if (!Converter.validateAddress($("#sendRecipient").val(), addrIdentifier)) {
+      $("#sendInvalidRecipient").show();
+      $("#sendRecipient").addClass("is-invalid");
+      $("#sendBtn").prop("disabled", true);
+      sendRecipientOk = false;
+    }else{
+      $("#sendInvalidRecipient").hide();
+      $("#sendRecipient").removeClass("is-invalid");
+      sendRecipientOk = true;
+      $("#sendBtn").prop("disabled", !sendAmountOk);
+    }
+    
 });
 
 function resetSendErrors() {
@@ -186,10 +220,12 @@ browser.runtime.sendMessage({command: 'getBaseInfos'})
 
 function loadBaseInfos(response){
   $("#walletAddress").val(response.address.address);
-  if (!response.isEncrypted){
+  
+  if (response.showPasswordMsg){
     $("#setupPasswordPopup").css("display", "flex");
-    isWalletEncrypted = false;
   }
+  
+  isWalletEncrypted = response.isEncrypted;
 }
 
 /**
@@ -336,11 +372,6 @@ class ProgressRing extends HTMLElement {
 
 window.customElements.define('progress-ring', ProgressRing);
 
-$("#setupPasswordPopupClose").click(function(){
-  $("#setupPasswordPopup").hide();
-});
-
-
 /**
  * Settings tab
  */
@@ -384,6 +415,9 @@ $("#securitySettingsTab").click(function() {
 
 $("#setPasswordTab").click(function() {
   
+  $("#newPassword").val("");
+  $("#newPasswordRepeat").val("");
+  $("#newPasswordCurrent").val("");
   $("#setPasswordSettings").show();
   currentSettingsPage = 2;
   
@@ -411,10 +445,15 @@ $("#newPassword").click(function(){
 $("#newPasswordRepeat").click(function(){
   resetNewPasswordErrors();
 });
+$("#newPasswordCurrent").click(function(){
+  resetNewPasswordErrors();
+});
 
 function resetNewPasswordErrors() {
     $("#newPassword").removeClass("is-invalid");
     $("#newPasswordRepeat").removeClass("is-invalid");
+    $("#newPasswordCurrent").removeClass("is-invalid");
+    $("#newPasswordInvalidCurrent").hide();
     $("#newPasswordNoMatch").hide();
 }
 
@@ -437,16 +476,19 @@ $("#newPasswordConfBtn").click(function(){
     return;
   }
   
-  browser.runtime.sendMessage({command: 'newPassword', password: $("#newPassword").val()})
-  .then(function () {
-      $("#setPasswordMainForm").hide();
-      $("#setPasswordDone").show();
-      
-      setTimeout(function(){
-        $("#setPasswordMainForm").show();
-        $("#setPasswordDone").hide();
-      }, 3000);
-      
+  browser.runtime.sendMessage({command: 'newPassword', newPassword: $("#newPassword").val(), password: $("#newPasswordCurrent").val()})
+  .then(function (res) {
+    
+    if (!res) {//should not happen but let's still show an error
+      $("#newPassword").addClass("is-invalid");
+      $("#newPasswordRepeat").addClass("is-invalid");
+      $("#newPasswordNoMatch").show();
+      return;
+    }
+    
+    $("#settingsReturnBtn").trigger("click");
+    $("#settingsReturnBtn").trigger("click");
+    $("#settingsReturnBtn").trigger("click");
   });
 });
 
@@ -458,18 +500,112 @@ $("#newPasswordCurrent").on("input", function(){
 });
 
 $("#newPasswordConfPwBtn").click(function(){
-  browser.runtime.sendMessage({command: 'newPassword', password: $("#newPassword").val()})
-  .then(function () {
-      $("#setPasswordMainForm").hide();
-      $("#setPasswordDone").show();
-      
-      setTimeout(function(){
-        $("#setPasswordMainForm").show();
-        $("#setPasswordDone").hide();
-      }, 3000);
-      
+  browser.runtime.sendMessage({command: 'newPassword', newPassword: $("#newPassword").val(), password: $("#newPasswordCurrent").val()})
+  .then(function (res) {
+    
+    if (!res) {
+      $("#newPasswordCurrent").addClass("is-invalid");
+      $("#newPasswordInvalidCurrent").show();
+      return;
+    }
+    
+    $("#setPasswordPassForm").hide();
+    $("#setPasswordMainForm").show();
+    $("#settingsReturnBtn").trigger("click");
+    $("#settingsReturnBtn").trigger("click");
+    $("#settingsReturnBtn").trigger("click");
   });
 });
+
+$("#setupPasswordPopupClose").click(function(){
+  $("#setupPasswordPopup").hide();
+  browser.runtime.sendMessage({command: 'hiddenPwMsg'});
+});
+
+$("#btnSetupPassword").click(function(){
+  $("#settingsBtn").trigger("click");
+  $("#securitySettingsTab").trigger("click");
+  $("#setPasswordTab").trigger("click");
+  $("#setupPasswordPopup").hide();
+});
+
+
+$("#networkSettingsTab").click(function() {
+  
+  $("#networkSettings").show();
+  $("#settingsTitle").html("Network");
+  currentSettingsPage = 1;
+  
+});
+
+var providersString = "";
+
+$("#changeProvidersTab").click(function() {
+  
+  $("#changeProvidersSettings").show();
+  currentSettingsPage = 2;
+  
+  browser.runtime.sendMessage({command: "getProviders"})
+    .then(function (res) {
+      providersString = "";
+      
+      for (const provider of res)
+        providersString = providersString + provider + "\n";
+        
+      $("#endpointsInput").val(providersString);
+    });
+});
+
+$("#endpointsInput").on("input", function(){
+  if ($("#endpointsInput").val().replaceAll("\n", "") == providersString.replaceAll("\n", "")) {
+      $("#endpointsInput").removeClass("is-invalid");
+      $("#changeProvidersInvalid").hide();
+    $("#saveEndpointsBtn").prop("disabled", true);
+    return;
+  }
+  
+  let newProviders = $("#endpointsInput").val().split("\n");
+  let checkDuplicate = {};
+  
+  for (let newProvider of newProviders){
+    if (newProvider == "") continue;
+    
+    if (!validURL(newProvider)) {
+      $("#endpointsInput").addClass("is-invalid");
+      $("#changeProvidersInvalid").show();
+      $("#saveEndpointsBtn").prop("disabled", true);
+      return;
+    }
+    
+    if (checkDuplicate[newProvider]) {
+      $("#endpointsInput").addClass("is-invalid");
+      $("#changeProvidersInvalid").show();
+      $("#saveEndpointsBtn").prop("disabled", true);
+      return;
+    }else checkDuplicate[newProvider] = true;
+  }
+  
+  $("#endpointsInput").removeClass("is-invalid");
+  $("#changeProvidersInvalid").hide();
+  $("#saveEndpointsBtn").prop("disabled", false);
+});
+
+$("#saveEndpointsBtn").click(function(){
+  let newProviders = $("#endpointsInput").val().split("\n");
+  let providers = [];
+  for (const provider of newProviders) 
+    if (validURL(provider)) 
+      providers.push(provider);
+  
+  browser.runtime.sendMessage({"command": "setProviders", "providers": providers})
+    .then(function (res) {
+      $("#saveEndpointsBtn").prop("disabled", true);
+      $("#settingsReturnBtn").trigger("click");
+      $("#settingsReturnBtn").trigger("click");
+      $("#settingsReturnBtn").trigger("click");
+    });
+});
+
 
 $("#unlockPassword").on("input", function(){
   if ($("#unlockPassword").val().length >= 8)
@@ -509,6 +645,16 @@ function enableLoadBtn(elem) {
     elem.find("val").show();
     elem.find("i").hide();
     elem.attr("disabled", false);
+}
+
+function validURL(str) {
+  var pattern = new RegExp('^(https?:\\/\\/)?'+ // protocol
+    '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // domain name
+    '((\\d{1,3}\\.){3}\\d{1,3}))'+ // OR ip (v4) address
+    '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // port and path
+    '(\\?[;&a-z\\d%_.~+=-]*)?'+ // query string
+    '(\\#[-a-z\\d_]*)?$','i'); // fragment locator
+  return !!pattern.test(str);
 }
 
    /* pair = sjcl.ecc.ecdsa.generateKeys(sjcl.ecc.curves.k256);

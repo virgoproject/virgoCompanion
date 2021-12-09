@@ -140,18 +140,21 @@ class Wallet {
         
     }
     
-    encrypt(password){
+    encrypt(newPassword, password){
         for (var address of this.addresses) {
-            address.encrypt(password);
+            if(!address.encrypt(newPassword, password))
+                return false;
         }
         
         this.version = 1;
         this.passwordSalt = sjcl.random.randomWords(32);
-        var passwordHash = sjcl.misc.pbkdf2(password, this.passwordSalt, 10000, 256);
+        var passwordHash = sjcl.misc.pbkdf2(newPassword, this.passwordSalt, 10000, 256);
         this.dataKey = sjcl.random.randomWords(8); 
         this.encryptedDataKeyIV = sjcl.random.randomWords(4);
         var cipher = new sjcl.cipher.aes(passwordHash);
         this.encryptedDataKey = sjcl.mode.ctr.encrypt(cipher, this.dataKey, this.encryptedDataKeyIV);
+        
+        return true;
     }
     
     isEncrypted(){

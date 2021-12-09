@@ -13,7 +13,7 @@ class VirgoAPI {
             this.providers = [];
             for (var i = 0; i < hosts.length; i++){
                 if (validURL(hosts[i]))
-                    addProvider(hosts[i]);
+                    this.addProvider(hosts[i]);
             }
         }
         
@@ -359,20 +359,16 @@ class TransactionBuilder {
     }
     
     send(password){
-        console.log("sending transaction");
         if (this.address === undefined)
             throw "No address defined";
-        console.log("st1");
         if (this.outputs.length === 0)
             throw "No output defined";
-        console.log("st2");
 
         this.privateKey = this.address.getPrivateKey(password);
         if (!this.privateKey){
             this.theCallback(false);
             return;
         }
-        console.log("st3");
 
         this.outputsValue = 0;
         for (var output of this.outputs)
@@ -383,7 +379,6 @@ class TransactionBuilder {
             this._retrieveInputs(1);
             return;
         }
-                console.log("st4");
 
         this._validateAmounts();
     }
@@ -560,6 +555,18 @@ class ProvidersWatcher {
         this.pendingProviders.push(provider.hostname);
     }
     
+    removeProvider(host){
+        let provider = this.providersByHostname.get(host);
+        
+        if (provider !== undefined) {
+            this.providersByHostname.delete(host);
+            this.readyProviders.delete(provider);
+            const index = this.pendingProviders.indexOf(provider);
+            if (index > -1)
+                this.pendingProviders.splice(index, 1);
+        }
+    }
+    
     checkPendingProvider(provider){
         var watcher = this;
         
@@ -688,14 +695,23 @@ class Address {
         return json;
     }
     
-    encrypt(newPassword){
+    encrypt(newPassword, password){
+        let privateKey = this.getPrivateKey(password);
+        console.log("password: ");
+        console.log(password);
+        console.log("private Key: ");
+        console.log(privateKey);
+        if (!privateKey) return false;
+        
         this.salt = sjcl.random.randomWords(32);
         this.iv = sjcl.random.randomWords(4);
         
         var hashedPassword = sjcl.misc.pbkdf2(newPassword, this.salt, 10000, 256);
         var cipher = new sjcl.cipher.aes(hashedPassword);
         
-        this.privateKey = sjcl.mode.ctr.encrypt(cipher, this.privateKey.get(), this.iv);
+        this.privateKey = sjcl.mode.ctr.encrypt(cipher, privateKey.get(), this.iv);
+        
+        return true;
     }
     
     isEncrypted(){
@@ -721,7 +737,6 @@ class Address {
             sjcl.ecc.curves.k256.field.fromBits(decryptedPkeyBits));
         
         if (!this.checkAgainstPrivateKey(privateKey)) return false;
-        console.log("good");
         return privateKey;
     }
     
