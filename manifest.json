@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Virgo Wallet",
-  "version": "0.1",
+  "version": "0.2",
   "short_name": "Virgo Wallet",
   "description": "Store your VGOs and use Apps built on Virgo",
   "permissions": ["storage","notifications"],
@@ -26,7 +26,7 @@
       "js/sjcl/core/bitArray.js",
       "js/sjcl/core/codecBytes.js",
       "js/sjcl/core/ctr.js",
-      "js/bigInteger.js",
+      "js/BigInteger.js",
       "js/virgoAPI.js",
       "js/wallet.js",
       "js/crypto.js",

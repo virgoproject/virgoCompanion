@@ -128,7 +128,7 @@ $("#sendAmount").on("input", function(){
       return;
     }
     
-    if ($("#sendAmount").val() <= 0 || $("#sendAmount").val() > Number.parseInt($("#walletBalance").html())) {
+    if ($("#sendAmount").val() <= 0 || $("#sendAmount").val() > Number.parseFloat($("#walletBalance").html())) {
         $("#sendBtn").prop("disabled", true);
         $("#sendAmount").addClass("is-invalid");
         $("#sendInvalidAmount").show();
@@ -199,6 +199,8 @@ $("#sendConfBtn").click(function(){
             $("#sendPassword").addClass("is-invalid");
             return;
         }
+        $("#sendForm2").hide();
+        $("#sendForm1").show();
         $("#sendPopup").hide();
     });
 });

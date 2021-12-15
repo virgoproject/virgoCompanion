@@ -160,5 +160,5 @@ browser.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 setInterval(function(){
     if (wallet === undefined) return;
     wallet.update();
-}, 10000);
+}, 5000);
 

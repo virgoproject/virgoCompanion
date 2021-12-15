@@ -97,6 +97,7 @@ class VirgoAPI {
         provider.get("/tx/" + hash, function(resp){
             if (resp.status === 200) {
               var transaction = Transaction.fromJSON(resp.response);
+              
               if (transaction && hash == transaction.hash){
                 foundTxs.set(hash, transaction);
                 if (foundTxs.size < transactionsHashes.length) {
@@ -245,13 +246,13 @@ class VirgoAPI {
     }
     
     static amountToAtomic(amount){
-        return Math.max(1, amount * Math.pow(10, decimals));
+        return Math.round(Math.max(1, amount * Math.pow(10, decimals)));
     }
 }
 
 class Transaction {
     
-    constructor(hash, inputs, outputs, outputsByAddress, parents, sig, pubKey, date){
+    constructor(hash, inputs, outputs, outputsByAddress, parents, sig, pubKey, date, parentBeacon, nonce){
         this.hash = hash;
         this.inputs = inputs;
         this.outputs = outputs;
@@ -260,23 +261,19 @@ class Transaction {
         this.sig = sig;
         this.pubKey = pubKey;
         this.date = date;
-        this.address = Converter.addressify(pubKey, addrIdentifier);
+        
+        this.address = "mining";
+        if (pubKey != null)
+            this.address = Converter.addressify(pubKey, addrIdentifier);
+            
+        this.parentBeacon = parentBeacon;
+        this.nonce = nonce;
         
         this.impactFor = [];
     }
     
     static fromJSON(json){
       try {
-        var inputs = [];
-        
-        for (var input of json.inputs) {
-            //verify hash validity
-            Converter.hexToBytes(input);
-            if (input.length != 64) throw "invalid sha256 hash";
-            
-            inputs.push(input);
-        }
-        
         var outputs = [];
         var outputsByAddress = new Map();
         
@@ -298,19 +295,46 @@ class Transaction {
             parents.push(parent);
         }
         
-        var pubKey = Converter.hexToBytes(json.pubKey);
-        var sig = ECDSA.decodeSig(json.sig);
-        var iop = Array.from(new TextEncoder('utf-8').encode(JSON.stringify(json.parents) + JSON.stringify(json.inputs) + JSON.stringify(json.outputs)));
-        var bits = Array.prototype.concat(iop, pubKey, Converter.longToByteArrayLE(json.date));
-        var txHash = sjcl.hash.sha256.hash(sjcl.hash.sha256.hash(sjcl.codec.bytes.toBits(bits)));
-
-        var dp = ECDSA.ECPointDecompress(json.pubKey);
-        dp = dp.substr(2, dp.length);
-        var pub = new sjcl.ecc.ecdsa.publicKey(sjcl.ecc.curves.k256, sjcl.codec.hex.toBits(dp));
+        var inputs = [];
+        let sig = null;
+        let pubKey = null;
         
-        if (!ECDSA.verify(txHash, sjcl.codec.bytes.toBits(sig), pub)) return false;
+        let parentBeacon = null;
+        let nonce = null;
         
-        return new Transaction(Converter.changeEndianness(sjcl.codec.hex.fromBits(txHash)), inputs, outputs, outputsByAddress, parents, sig, pubKey, json.date);
+        let txHash = null;
+        
+        if (json.parentBeacon !== undefined) {
+            if (json.parentBeacon.length != 64) throw "invalid sha256 hash";
+            
+            let iop = Array.from(new TextEncoder('utf-8').encode(JSON.stringify(json.parents) + JSON.stringify(json.outputs)));
+            let bits = Array.prototype.concat(iop, Converter.hexToBytes(Converter.changeEndianness(json.parentBeacon)), Converter.longToByteArrayLE(json.date), Converter.hexToBytes(json.nonce));
+            txHash = sjcl.hash.sha256.hash(sjcl.hash.sha256.hash(sjcl.codec.bytes.toBits(bits)));
+            
+        }else{
+            for (var input of json.inputs) {
+                //verify hash validity
+                Converter.hexToBytes(input);
+                if (input.length != 64) throw "invalid sha256 hash";
+                
+                inputs.push(input);
+            }
+            
+            pubKey = Converter.hexToBytes(json.pubKey);
+            sig = ECDSA.decodeSig(json.sig);
+            
+            let iop = Array.from(new TextEncoder('utf-8').encode(JSON.stringify(json.parents) + JSON.stringify(json.inputs) + JSON.stringify(json.outputs)));
+            let bits = Array.prototype.concat(iop, pubKey, Converter.longToByteArrayLE(json.date));
+            txHash = sjcl.hash.sha256.hash(sjcl.hash.sha256.hash(sjcl.codec.bytes.toBits(bits)));
+    
+            var dp = ECDSA.ECPointDecompress(json.pubKey);
+            dp = dp.substr(2, dp.length);
+            var pub = new sjcl.ecc.ecdsa.publicKey(sjcl.ecc.curves.k256, sjcl.codec.hex.toBits(dp));
+            
+            if (!ECDSA.verify(txHash, sjcl.codec.bytes.toBits(sig), pub)) return false;
+        }
+        
+        return new Transaction(Converter.changeEndianness(sjcl.codec.hex.fromBits(txHash)), inputs, outputs, outputsByAddress, parents, sig, pubKey, json.date, parentBeacon, nonce);
       } catch(e) {
         return false;
       }  
