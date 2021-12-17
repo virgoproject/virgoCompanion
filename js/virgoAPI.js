@@ -452,7 +452,7 @@ class TransactionBuilder {
                     
                 }
                 
-                if (resp2.states.length < 10) {
+                if (resp2.states.length < 5) {
                     //not enough funds
                     txBuilder.theCallback(false);
                     return;
@@ -461,7 +461,7 @@ class TransactionBuilder {
                 txBuilder._retrieveInputs(page+1);
             });
             
-        }, 10, page);
+        }, 5, page);
     }
     
     _validateAmounts(){
@@ -548,7 +548,9 @@ class ProvidersWatcher {
         if (this.pendingProviders.length == 0)
             return;
         
-        this.checkPendingProvider(this.providersByHostname.get(this.pendingProviders.pop(this.lastChecked)));
+        let provider = this.providersByHostname.get(this.pendingProviders.pop(this.lastChecked));
+        if (provider !== undefined)
+            this.checkPendingProvider(provider);
         
         if (this.lastChecked+1 < this.pendingProviders.length)
             this.lastChecked++;
@@ -629,27 +631,51 @@ class Provider {
     
     constructor(hostname){
         this.hostname = hostname.replace(/\/$/, "");
+        this.effectiveHostname = this.hostname;
     }
     
     get(method, callback){
+        let provider = this;
         var req = new XMLHttpRequest();
-        req.open("GET", this.hostname + method, true);
+        req.open("GET", this.effectiveHostname + method, true);
         req.responseType = "json";
         req.onreadystatechange = function() {
-            if (this.readyState == 4)
+            if (this.readyState == 4){
+                if (this.status == 0) {//empty response, switch from http to https
+                    provider.effectiveHostname = provider.hostname.replace("http://","https://");
+                    callback({"status": 500, "response": null});
+                    return;
+                }
                 callback({"status": this.status, "response": this.response});
+            }
+        };
+        req.ontimeout = function(){
+            provider.effectiveHostname = provider.hostname.replace("https://","http://");
+            callback({"status": 500, "response": null});
+            return;
         };
         req.send();
     }
     
     post(method, data, callback){
         var req = new XMLHttpRequest();
-        req.open("POST", this.hostname + method, true);
+        req.open("POST", this.effectiveHostname + method, true);
         req.responseType = "json";
         req.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
         req.onreadystatechange = function() {
-            if (this.readyState == 4)
+            if (this.readyState == 4){
+                if (this.status == 0) {//empty response, switch from http to https
+                    provider.effectiveHostname = provider.hostname.replace("http://","https://");
+                    callback({"status": 500, "response": null});
+                    return;
+                }
                 callback({"status": this.status, "response": this.response});
+            }
+        };
+        req.ontimeout = function(){
+            provider.effectiveHostname = provider.hostname.replace("https://","http://");
+            callback({"status": 500, "response": null});
+            return;
         };
         req.send(data);
     }

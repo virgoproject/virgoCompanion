@@ -1,4 +1,4 @@
-virgoAPI = new VirgoAPI("https://ap.eagle.virgo.network:8000");
+virgoAPI = new VirgoAPI(["https://us.eagle.virgo.network:8000/","https://eu.eagle.virgo.network:8000/","https://ap.eagle.virgo.network:8000/","https://34.217.105.127:8000/"]);
 wallet = null;
 lastShowedSetupPwMsg = 0;
 

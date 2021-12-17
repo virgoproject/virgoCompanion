@@ -78,10 +78,11 @@ Address.prototype.updateTx = function(transaction, newState){
 
 class Wallet {
     
-    constructor(version, addresses, transactions, dataKey, encryptedDataKey, encryptedDataKeyIV, passwordSalt){
+    constructor(version, addresses, transactions, transactionsStates, dataKey, encryptedDataKey, encryptedDataKeyIV, passwordSalt){
         this.version = version;
         this.addresses = addresses;
         this.transactions = transactions;
+        this.transactionsStates = transactionsStates;
         this.dataKey = dataKey;
         this.encryptedDataKey = encryptedDataKey;
         this.encryptedDataKeyIV = encryptedDataKeyIV;
@@ -101,7 +102,7 @@ class Wallet {
         var cipher = new sjcl.cipher.aes(passwordHash);
         var encryptedDataKey = sjcl.mode.ctr.encrypt(cipher, dataKey, iv);
         
-        return new Wallet(1, [address], new Map(), dataKey, encryptedDataKey, iv, salt);
+        return new Wallet(1, [address], new Map(), new Map(), dataKey, encryptedDataKey, iv, salt);
     }
     
     static fromJSON(json, password){
@@ -131,7 +132,7 @@ class Wallet {
                 addresses.push(address);
             }
             
-            return new Wallet(json.version, addresses, new Map(), dataKey, encryptedDataKey, encryptedDataKeyIV, passwordSalt);
+            return new Wallet(json.version, addresses, new Map(), new Map(), dataKey, encryptedDataKey, encryptedDataKeyIV, passwordSalt);
             
         } catch(e) {
             console.log(e);
@@ -236,20 +237,28 @@ class Wallet {
     
     updateStates(){
         var wallet = this;
-        virgoAPI.getTransactionsStates(Array.from(this.transactions.keys()), function(resp){
-            if (resp.responseCode !== 200) return;
-            for (var state of resp.states) {
-                var transaction = wallet.transactions.get(state[0]);
-                if (transaction === undefined) continue;
-                
-                if (transaction.state === undefined || transaction.state.status !== state[1].status) {
-                    for (var address of wallet.addresses)
-                        address.updateTx(transaction, state[1]);
+        
+        let toRetrieve = [];
+        
+        for (let transaction of this.transactions.values())
+            if (transaction.state === undefined || transaction.state.confirmations < 16)
+                toRetrieve.push(transaction.hash);
+        
+        if (toRetrieve.length > 0)
+            virgoAPI.getTransactionsStates(toRetrieve, function(resp){
+                if (resp.responseCode !== 200) return;
+                for (var state of resp.states) {
+                    var transaction = wallet.transactions.get(state[0]);
+                    if (transaction === undefined) continue;
+                    
+                    if (transaction.state === undefined || transaction.state.status !== state[1].status) {
+                        for (var address of wallet.addresses)
+                            address.updateTx(transaction, state[1]);
+                    }
+                    
+                    transaction.state = state[1];
                 }
-                
-                transaction.state = state[1];
-            }
-        });
+            });
     }
     
     toJSON(){
