@@ -125,20 +125,43 @@ class Wallet {
                 data = JSON.parse(Converter.Utf8ArrayToStr(sjcl.codec.bytes.fromBits(sjcl.mode.ctr.decrypt(cipher, encryptedData, encryptedDataIV))));
             }
             
-            var addresses = [];
+            let addresses = [];
             
-            for (var i = 0; i < data.addresses.length; i++) {
-                var address = Address.fromJSON(data.addresses[i], password);
+            for (let i = 0; i < data.addresses.length; i++) {
+                let address = Address.fromJSON(data.addresses[i], password);
                 addresses.push(address);
             }
             
-            return new Wallet(json.version, addresses, new Map(), new Map(), dataKey, encryptedDataKey, encryptedDataKeyIV, passwordSalt);
+            let transactions = new Map();
+            
+            if (data.transactions)
+                for (let i = 0; i < data.transactions.length; i++) {
+                    let transaction = Transaction.fromJSON(data.transactions[i]);
+                    if (transaction)
+                        transactions.set(transaction.hash, transaction);
+                }
+            
+            return new Wallet(json.version, addresses, transactions, new Map(), dataKey, encryptedDataKey, encryptedDataKeyIV, passwordSalt);
             
         } catch(e) {
             console.log(e);
             return false;
         }
         
+    }
+    
+    afterLoad(){
+        if (this.transactions.length == 0)
+            return;
+        
+        let transactions = Array.from(this.transactions.values());
+        
+        for (let transaction of transactions) {
+            for (var address of this.addresses)
+                address.addTx(transaction, transactions);
+        }
+        
+        this.updateStates();
     }
     
     encrypt(newPassword, password){
@@ -204,6 +227,8 @@ class Wallet {
                               "iconUrl": browser.extension.getURL("images/logoPurple.png"),
                               "message": VirgoAPI.formatAmount(tx.impact) + "VGO from " + tx.address
                             });
+                            
+                            wallet.save();
                         }
                         wallet.updateStates();
                     }
@@ -271,13 +296,15 @@ class Wallet {
         for (const address of this.addresses)
             addressesJSON.push(address.toJSON());
         
-        /**
+        
         var transactionsJSON = [];
-        for (const transaction of this.transactions)
+        
+        let transactions = Array.from(this.transactions.values());
+        for (const transaction of transactions)
             transactionsJSON.push(transaction.toJSON());
-            **/
+            
         data.addresses = addressesJSON;
-        //data.transactions = transactionsJSON;
+        data.transactions = transactionsJSON;
         
         if (this.dataKey === undefined)
             json.encryptedData = data;
@@ -295,6 +322,10 @@ class Wallet {
         }
         
         return json;
+    }
+    
+    save(){
+        browser.storage.local.set({"wallet": this.toJSON()});
     }
     
 }

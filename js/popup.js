@@ -415,6 +415,16 @@ $("#securitySettingsTab").click(function() {
   
 });
 
+$("#wipeSettingsTab").click(function(){
+    browser.runtime.sendMessage({command: 'resetWallet'})
+  .then(function () {
+    let elem = $("#baseActivity").clone();
+    $("#resumeTab").html("");
+    $("#resumeTab").append(elem);
+    $("#settingsReturnBtn").trigger("click");
+  });
+});
+
 $("#setPasswordTab").click(function() {
   
   $("#newPassword").val("");

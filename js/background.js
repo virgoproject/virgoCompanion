@@ -10,6 +10,7 @@ browser.storage.local.get("wallet").then(
             var foundWallet = Wallet.fromJSON(res.wallet);
             if (foundWallet !== false) {
                 wallet = foundWallet;
+                wallet.afterLoad();
             }
         }
     },
@@ -40,7 +41,7 @@ browser.storage.local.get("lastShowedSetupPwMsg").then(
 
 function generateWallet() {
     wallet = Wallet.generate();
-    browser.storage.local.set({"wallet": wallet.toJSON()});
+    wallet.save();
 }
 
 function forgetWallet() {
@@ -100,6 +101,8 @@ browser.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                     let tx = Transaction.fromJSON(result.transaction);
                     for (var address of wallet.addresses)
                         address.addTx(tx, [tx]);
+                        
+                    wallet.save();
                 }
                 sendResponse(result);
             }).send(request.password);
@@ -122,6 +125,7 @@ browser.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                         var foundWallet = Wallet.fromJSON(res.wallet, request.password);
                         if (foundWallet !== false) {
                             wallet = foundWallet;
+                            wallet.afterLoad();
                             sendResponse({"address": wallet.getAddress(), "isEncrypted": wallet.isEncrypted()});
                             return;
                         }
@@ -150,6 +154,19 @@ browser.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 virgoAPI.providersWatcher.removeProvider(provider);
                 
             browser.storage.local.set({providers: request.providers});
+            sendResponse(true);
+            break;
+        case "resetWallet":
+            for (const address of wallet.addresses){
+                address.transactions = new Map();
+                address.waitedTxs = new Map();
+                address.balance = 0;
+                address.pendingBalance = 0;
+            }
+            
+            wallet.transactions = new Map();
+            wallet.transactionsStates = new Map();
+            wallet.save();
             sendResponse(true);
             break;
     }

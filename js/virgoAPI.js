@@ -5,7 +5,7 @@ const decimals = 8;
 class VirgoAPI {
        
     constructor(hosts){
-        this.providersWatcher = new ProvidersWatcher(1000);
+        this.providersWatcher = new ProvidersWatcher(10000);
         
         if (typeof hosts === "string" && validURL(hosts))
             this.addProvider(hosts);
@@ -68,23 +68,56 @@ class VirgoAPI {
     
     getTransactions(transactionsHashes, callback){
         this.providers = this.providersWatcher.getProvidersByScore();
-        this._getTransactions(transactionsHashes, callback, 0, new Map(), 0);
+        
+        let toRun = 8;
+        if (transactionsHashes.length < toRun)
+            toRun = transactionsHashes.length;
+            
+        let perThread = Math.round(transactionsHashes.length/toRun);
+        let remaining = transactionsHashes%toRun;
+        let start = 0;
+        
+        let totalFound = new Map();
+        let gotResponses = 0;
+        let intermediateCallback = function(response){
+            if (response !== undefined)
+                totalFound = new Map([...totalFound, ...response]);
+            
+            gotResponses++;
+            if (gotResponses >= toRun) {
+                if (totalFound.size > 0) {
+                    callback({"responseCode": 200, "txs": totalFound});
+                    return;
+                }
+                
+                callback({"responseCode": 404});
+            }
+        };
+        
+        for (let i = 0; i<toRun; i++) {
+            let bonus = 0;
+            if (remaining > 0){
+                bonus = 1;
+                remaining--;
+            }
+            
+            this._getTransactions(transactionsHashes.slice(start, start+perThread+bonus), intermediateCallback, 0, new Map(), 0);
+            start = start+perThread+bonus;
+        }
+        
+        
     }
     
     _getTransactions(transactionsHashes, callback, providerNum, foundTxs, hashNum){
         var api = this;
         
         if (providerNum >= this.providers.length) {
-            var json = {};
+            
             if (foundTxs.size > 0) {
-                json.responseCode = 200;
-                json.txs = foundTxs;
-                callback(json);
+                callback(foundTxs);
                 return;
             }
-            
-            json.responseCode = 404;
-            callback(json);
+            callback();
             return;
         }
         
@@ -311,6 +344,9 @@ class Transaction {
             let bits = Array.prototype.concat(iop, Converter.hexToBytes(Converter.changeEndianness(json.parentBeacon)), Converter.longToByteArrayLE(json.date), Converter.hexToBytes(json.nonce));
             txHash = sjcl.hash.sha256.hash(sjcl.hash.sha256.hash(sjcl.codec.bytes.toBits(bits)));
             
+            parentBeacon = json.parentBeacon;
+            nonce = json.nonce;
+            
         }else{
             for (var input of json.inputs) {
                 //verify hash validity
@@ -338,6 +374,31 @@ class Transaction {
       } catch(e) {
         return false;
       }  
+    }
+    
+    toJSON() {
+        let json = {};
+        
+        json.parents = this.parents;
+        
+        if (this.parentBeacon == null) {
+            json.sig = ECDSA.encodeSig(Converter.bytesToHex(this.sig)).toUpperCase();
+            json.pubKey = Converter.bytesToHex(this.pubKey).toUpperCase();
+            json.inputs = this.inputs;
+        }else{
+            json.parentBeacon = this.parentBeacon;
+            json.nonce = this.nonce;
+        }
+        
+        let outputs = [];
+        
+        for (let output of this.outputs)
+            outputs.push(output.address + "," + Converter.changeEndianness(Converter.bytesToHex(Converter.longToByteArray(output.value))).toUpperCase());
+        
+        json.outputs = outputs;
+        json.date = this.date;
+        
+        return json;
     }
     
 }
@@ -538,7 +599,7 @@ class ProvidersWatcher {
         
         setInterval(function(){
             watcher.checkProvider();
-        }, tickrate);
+        }, tickrate/10);
         setInterval(function(){
             watcher.updateScores();
         }, tickrate);
@@ -562,15 +623,16 @@ class ProvidersWatcher {
         
         for (const providerHostname of this.readyProviders.keys()) {
             const provider = this.providersByHostname.get(providerHostname);
-            provider.get("/nodeinfos", function(resp){
-                if (resp.status == 200){
-                    watcher.readyProviders.set(provider.hostname, resp.response.BeaconChainWeight);
-                    return;
-                }
-                
-                watcher.readyProviders.delete(provider.hostname);
-                watcher.pendingProviders.push(provider.hostname);
-            });
+            if (provider != undefined)
+                provider.get("/nodeinfos", function(resp){
+                    if (resp.status == 200){
+                        watcher.readyProviders.set(provider.hostname, resp.response.BeaconChainWeight-resp.responseTime);
+                        return;
+                    }
+                    
+                    watcher.readyProviders.delete(provider.hostname);
+                    watcher.pendingProviders.push(provider.hostname);
+                });
         }
     }
     
@@ -586,8 +648,8 @@ class ProvidersWatcher {
         
         if (provider !== undefined) {
             this.providersByHostname.delete(host);
-            this.readyProviders.delete(provider);
-            const index = this.pendingProviders.indexOf(provider);
+            this.readyProviders.delete(host);
+            const index = this.pendingProviders.indexOf(host);
             if (index > -1)
                 this.pendingProviders.splice(index, 1);
         }
@@ -639,19 +701,22 @@ class Provider {
         var req = new XMLHttpRequest();
         req.open("GET", this.effectiveHostname + method, true);
         req.responseType = "json";
+        
+        let sendTime = (new Date()).getTime();
+        
         req.onreadystatechange = function() {
             if (this.readyState == 4){
                 if (this.status == 0) {//empty response, switch from http to https
                     provider.effectiveHostname = provider.hostname.replace("http://","https://");
-                    callback({"status": 500, "response": null});
+                    callback({"status": 500, "responseTime": (new Date()).getTime()-sendTime, "response": null});
                     return;
                 }
-                callback({"status": this.status, "response": this.response});
+                callback({"status": this.status, "responseTime": (new Date()).getTime()-sendTime, "response": this.response});
             }
         };
         req.ontimeout = function(){
             provider.effectiveHostname = provider.hostname.replace("https://","http://");
-            callback({"status": 500, "response": null});
+            callback({"status": 500, "responseTime": (new Date()).getTime()-sendTime, "response": null});
             return;
         };
         req.send();
@@ -662,19 +727,22 @@ class Provider {
         req.open("POST", this.effectiveHostname + method, true);
         req.responseType = "json";
         req.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+        
+        let sendTime = (new Date()).getTime();
+        
         req.onreadystatechange = function() {
             if (this.readyState == 4){
                 if (this.status == 0) {//empty response, switch from http to https
                     provider.effectiveHostname = provider.hostname.replace("http://","https://");
-                    callback({"status": 500, "response": null});
+                    callback({"status": 500, "responseTime": (new Date()).getTime()-sendTime, "response": null});
                     return;
                 }
-                callback({"status": this.status, "response": this.response});
+                callback({"status": this.status, "responseTime": (new Date()).getTime()-sendTime, "response": this.response});
             }
         };
         req.ontimeout = function(){
             provider.effectiveHostname = provider.hostname.replace("https://","http://");
-            callback({"status": 500, "response": null});
+            callback({"status": 500, "responseTime": (new Date()).getTime()-sendTime, "response": null});
             return;
         };
         req.send(data);
@@ -747,10 +815,7 @@ class Address {
     
     encrypt(newPassword, password){
         let privateKey = this.getPrivateKey(password);
-        console.log("password: ");
-        console.log(password);
-        console.log("private Key: ");
-        console.log(privateKey);
+        
         if (!privateKey) return false;
         
         this.salt = sjcl.random.randomWords(32);
