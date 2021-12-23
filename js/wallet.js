@@ -154,11 +154,9 @@ class Wallet {
         if (this.transactions.length == 0)
             return;
         
-        let transactions = Array.from(this.transactions.values());
-        
         for (let transaction of transactions) {
             for (var address of this.addresses)
-                address.addTx(transaction, transactions);
+                address.addTx(transaction, this.transactions);
         }
         
         this.updateStates();
