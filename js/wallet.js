@@ -7,9 +7,11 @@ Address.prototype.addWaitedTx = function(txHash, waitingTx){
 
 Address.prototype.addTx = function(transaction, retrieved){
     if (this.transactions.has(transaction.hash)) return;
-    
+
+    transaction.inputsWithAmount = [];
+
     var total = 0;
-    console.log(transaction);
+
     if (transaction.outputsByAddress.has(this.address))
         total += transaction.outputsByAddress.get(this.address);
     
@@ -25,8 +27,10 @@ Address.prototype.addTx = function(transaction, retrieved){
                 return;
             }
             
-            if (inVal !== undefined)
+            if (inVal !== undefined) {
                 total -= inVal;
+                transaction.inputsWithAmount.push({"address": input, "value": inVal});
+            }
             
         }
     }
@@ -90,25 +94,25 @@ class Wallet {
     }
     
     static generate(password){
-        var address = Address.generate(password);
-        
+        const address = Address.generate(password);
+
         if (password === undefined)
             return new Wallet(0, [address], new Map());
-        
-        var salt = sjcl.random.randomWords(32);
-        var passwordHash = sjcl.misc.pbkdf2(password, salt, 10000, 256);
-        var dataKey = sjcl.random.randomWords(8); 
-        var iv = sjcl.random.randomWords(4);
-        var cipher = new sjcl.cipher.aes(passwordHash);
-        var encryptedDataKey = sjcl.mode.ctr.encrypt(cipher, dataKey, iv);
-        
+
+        const salt = sjcl.random.randomWords(32);
+        const passwordHash = sjcl.misc.pbkdf2(password, salt, 10000, 256);
+        const dataKey = sjcl.random.randomWords(8);
+        const iv = sjcl.random.randomWords(4);
+        const cipher = new sjcl.cipher.aes(passwordHash);
+        const encryptedDataKey = sjcl.mode.ctr.encrypt(cipher, dataKey, iv);
+
         return new Wallet(1, [address], new Map(), new Map(), dataKey, encryptedDataKey, iv, salt);
     }
     
     static fromJSON(json, password){
         try {
-            var data, encryptedDataKey, encryptedDataKeyIV, dataKey, passwordSalt;
-            
+            let data, encryptedDataKey, encryptedDataKeyIV, dataKey, passwordSalt;
+
             if (json.encryptedEncryptedDataKey === undefined) {
                 data = json.encryptedData;
             }else{
@@ -154,26 +158,26 @@ class Wallet {
         if (this.transactions.length == 0)
             return;
         
-        for (let transaction of transactions) {
-            for (var address of this.addresses)
-                address.addTx(transaction, this.transactions);
+        for (let transaction of this.transactions) {
+            for (const address of this.addresses)
+                address.addTx(transaction[1], this.transactions);
         }
         
         this.updateStates();
     }
     
     encrypt(newPassword, password){
-        for (var address of this.addresses) {
+        for (const address of this.addresses) {
             if(!address.encrypt(newPassword, password))
                 return false;
         }
         
         this.version = 1;
         this.passwordSalt = sjcl.random.randomWords(32);
-        var passwordHash = sjcl.misc.pbkdf2(newPassword, this.passwordSalt, 10000, 256);
+        let passwordHash = sjcl.misc.pbkdf2(newPassword, this.passwordSalt, 10000, 256);
         this.dataKey = sjcl.random.randomWords(8); 
         this.encryptedDataKeyIV = sjcl.random.randomWords(4);
-        var cipher = new sjcl.cipher.aes(passwordHash);
+        let cipher = new sjcl.cipher.aes(passwordHash);
         this.encryptedDataKey = sjcl.mode.ctr.encrypt(cipher, this.dataKey, this.encryptedDataKeyIV);
         
         return true;

@@ -367,7 +367,10 @@ class Transaction {
             dp = dp.substr(2, dp.length);
             var pub = new sjcl.ecc.ecdsa.publicKey(sjcl.ecc.curves.k256, sjcl.codec.hex.toBits(dp));
             
-            if (!ECDSA.verify(txHash, sjcl.codec.bytes.toBits(sig), pub)) return false;
+            if (!ECDSA.verify(txHash, sjcl.codec.bytes.toBits(sig), pub)){
+                console.log(json);
+                return false;
+            }
         }
         
         return new Transaction(Converter.changeEndianness(sjcl.codec.hex.fromBits(txHash)), inputs, outputs, outputsByAddress, parents, sig, pubKey, json.date, parentBeacon, nonce);
@@ -393,7 +396,7 @@ class Transaction {
         let outputs = [];
         
         for (let output of this.outputs)
-            outputs.push(output.address + "," + Converter.changeEndianness(Converter.bytesToHex(Converter.longToByteArray(output.value))).toUpperCase());
+            outputs.push(output.address + "," + Converter.bytesToHex(Converter.longToByteArrayLE(output.value)).replace(/\b0+/g, '').toUpperCase());
         
         json.outputs = outputs;
         json.date = this.date;

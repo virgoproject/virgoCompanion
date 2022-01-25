@@ -274,9 +274,24 @@ class Converter {
     static arraysEquals(a, b) {
       if(a.length!=b.length) return false;
       else {
-        for(var i = 0; i < a.length; i++)
+        for(let i = 0; i < a.length; i++)
           if(a[i]!=b[i]) return false;
       }
       return true;
+    }
+
+    static async randomWords(amount){
+        let res = await fetch(browser.runtime.getURL("js/wordlists/english.json"));
+        let json = await res.json();
+
+        let words = [];
+
+        for(const word of sjcl.random.randomWords(amount)){
+            const uword = word - Math.floor(word/2**32)*2**32;
+            let i = Math.floor(uword/4294967295*json.length);
+            words.push(json[i]);
+        }
+
+        return words;
     }
 }
