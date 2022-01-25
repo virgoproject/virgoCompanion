@@ -7,9 +7,11 @@ Address.prototype.addWaitedTx = function(txHash, waitingTx){
 
 Address.prototype.addTx = function(transaction, retrieved){
     if (this.transactions.has(transaction.hash)) return;
-    
+
+    transaction.inputsWithAmount = [];
+
     var total = 0;
-    console.log(transaction);
+
     if (transaction.outputsByAddress.has(this.address))
         total += transaction.outputsByAddress.get(this.address);
     
@@ -25,8 +27,10 @@ Address.prototype.addTx = function(transaction, retrieved){
                 return;
             }
             
-            if (inVal !== undefined)
+            if (inVal !== undefined) {
                 total -= inVal;
+                transaction.inputsWithAmount.push({"address": input, "value": inVal});
+            }
             
         }
     }

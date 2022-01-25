@@ -92,7 +92,7 @@ browser.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                     confirmations = tx.state.confirmations;
                 }
                 
-                sendResponse({"hash": tx.hash, "impact": tx.impact, "date": tx.date, "status": status, "confirmations": confirmations, "address": tx.address});
+                sendResponse({"hash": tx.hash, "inputs": tx.inputsWithAmount, "outputs": tx.outputs, "impact": tx.impact, "date": tx.date, "status": status, "confirmations": confirmations, "address": tx.address});
             }
             break;
         case "sendTransaction":
